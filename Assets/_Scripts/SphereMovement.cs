@@ -98,7 +98,7 @@ public class SphereMovement : MonoBehaviour
         velocity.x = Mathf.MoveTowards(velocity.x, desiredVelocity.x, maxSpeedChange);
         velocity.z = Mathf.MoveTowards(velocity.z, desiredVelocity.z, maxSpeedChange);
 
-        //Smoothes out the velocity so it is not snappy
+        //Smoothes out the velocity so it is not inconsistent
         Vector3 displacement = velocity * Time.deltaTime;
 
         //The new position to teleport the sphere
@@ -107,7 +107,8 @@ public class SphereMovement : MonoBehaviour
         //X axis bounds check
         if (newPos.x < allowedMoveArea.xMin)
         {
-            newPos.x = allowedMoveArea.xMin; //Stop the sphere from moving
+            //Stop the sphere from moving further out of the specified bounds
+            newPos.x = allowedMoveArea.xMin; 
             velocity.x = -velocity.x * bounciness; //Bounce the ball back
         }
         else if (newPos.x > allowedMoveArea.xMax)
