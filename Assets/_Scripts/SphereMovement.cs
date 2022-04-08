@@ -10,14 +10,119 @@ public class SphereMovement : MonoBehaviour
     [SerializeField, Range(0f, 100f)]
     float maxAcceleration = 10f;
 
+    [SerializeField, Range(0f, 10f)]
+    float jumpForce = 1f;
+
+    [SerializeField, Range(0.1f, 10f)]
+    float maxJumpHeight = 1f;
+
+    [SerializeField, Range(0, 5)]
+    int maxAirJumps = 0;
+
     [SerializeField]
     Rect allowedMoveArea = new Rect(-4.5f, -4.5f, 10f, 10);
 
     [SerializeField, Range(0f, 1f)]
     float bounciness = .5f;
 
+    Rigidbody playerRB;
+
     Vector2 playerInput;
-    Vector3 velocity;
+    Vector3 velocity, desiredVelocity;
+
+    bool canJump;
+    bool isGrounded;
+
+    //The current air jumps performed
+    int jumpPhase = 0;
+
+    private void Start()
+    {
+        playerRB = GetComponent<Rigidbody>();
+    }
+
+    private void FixedUpdate()
+    {
+        UpdateState();
+        
+        float maxSpeedChange = maxAcceleration * Time.deltaTime;
+
+        //Basically the same IFs from Phase 3 BUT COOLER 
+        velocity.x = Mathf.MoveTowards(velocity.x, desiredVelocity.x, maxSpeedChange);
+        velocity.z = Mathf.MoveTowards(velocity.z, desiredVelocity.z, maxSpeedChange);
+
+        //canJump changes inside Update()
+        if (canJump)
+        {
+            canJump = false;
+
+            //Execute the actual jump
+            ExecuteJump();
+        }
+
+        //Apply the final velocity to the attached rigidBody
+        playerRB.velocity = velocity;
+
+        //reset the isGrounded
+        isGrounded = false; 
+    }
+
+    void UpdateState()
+    {
+        //Reset the rigidBody velocity
+        velocity = playerRB.velocity;
+
+        //Reset the current jumpPhase
+        if (isGrounded)
+        {
+            jumpPhase = 0;
+        }
+    }
+
+    void ExecuteJump()
+    {
+        if(isGrounded || jumpPhase < maxAirJumps)
+        {
+            //Increment jumps executed
+            jumpPhase += 1;
+
+            //Apply the Vy = Sqrt(-2*g*h) mathematical type to restrain the jump Height, don't ask me ask the scientists....
+            velocity.y = Mathf.Sqrt(-2 * Physics.gravity.y * maxJumpHeight);
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        EvaluateCollision(collision);
+    }
+
+    /*private void OnCollisionExit()
+    {
+        isGrounded = false;
+    }*/
+
+    //We use ...Stay() so we don't miss a frame.
+    private void OnCollisionStay(Collision collision)
+    {
+        EvaluateCollision(collision);
+    }
+
+    /// <summary>
+    /// Call to check if an UPWARD (X axis) force is applied on the gameObject.
+    /// <para>Not optimal, neither correct for a game, just for demostration purposes.</para>
+    /// </summary>
+    /// <param name="collision"></param>
+    void EvaluateCollision(Collision collision)
+    {
+        Vector3 normal = Vector3.zero;
+
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            normal = collision.GetContact(i).normal;
+
+            isGrounded |= normal.y >= 0.9f;
+        }
+    }
 
     private void Update()
     {
@@ -86,7 +191,7 @@ public class SphereMovement : MonoBehaviour
         #endregion
 
         #region Phase 4
-        //Cache user input
+/*        //Cache user input
         playerInput.x = Input.GetAxis("Horizontal");
         playerInput.y = Input.GetAxis("Vertical");
 
@@ -130,10 +235,33 @@ public class SphereMovement : MonoBehaviour
         }
 
         //Finally set the new sphere position
-        transform.localPosition = newPos;
+        transform.localPosition = newPos;*/
+        #endregion
+
+        #region Phase_5
+        /*//Cache user input
+        playerInput.x = Input.GetAxis("Horizontal");
+        playerInput.y = Input.GetAxis("Vertical");
+
+        //Set the max speed we want to achieve
+        desiredVelocity = new Vector3(playerInput.x, 0f, playerInput.y) * maxSpeed;*/
+        #endregion
+
+        //ADDED JUMPING HERE
+        #region Phase_6
+        //Cache user input
+        playerInput.x = Input.GetAxis("Horizontal");
+        playerInput.y = Input.GetAxis("Vertical");
+        
+        //Set the max speed we want to achieve
+        desiredVelocity = new Vector3(playerInput.x, 0f, playerInput.y) * maxSpeed;
+
+        //Set canJump to the user input given or just keep it to the previous value
+        canJump |= Input.GetButtonDown("Jump");
         #endregion
     }
 
+    #region Utilities
     private void OnDrawGizmos()
     {
         Gizmos.color = new Color(0.0f, 1f, 0.0f);
@@ -144,4 +272,5 @@ public class SphereMovement : MonoBehaviour
     {
         Gizmos.DrawWireCube(new Vector3(rect.center.x, 0.01f, rect.center.y), new Vector3(rect.size.x, 0.01f, rect.size.y));
     }
+    #endregion
 }
